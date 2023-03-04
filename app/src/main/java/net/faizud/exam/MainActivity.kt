@@ -1,6 +1,7 @@
 package net.faizud.exam
 
 import android.content.Context
+import android.graphics.Bitmap
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
@@ -13,16 +14,11 @@ import android.webkit.WebViewClient
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.Crossfade
-import androidx.compose.animation.core.animateDp
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.updateTransition
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.List
-import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -46,17 +42,28 @@ class MainActivity : ComponentActivity() {
             WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON,
             WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
         )
-        val sharedPreference = getSharedPreferences("id.sch.smkthpati.exam", Context.MODE_PRIVATE)
+        val sharedPreference =
+            getSharedPreferences(BuildConfig.APPLICATION_ID, Context.MODE_PRIVATE)
+        viewModel = ExamViewModel(sharedPreference)
+        viewModel.loadState()
         val webView = WebView(this).apply {
             layoutParams = ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT
             )
-            webViewClient = WebViewClient()
+            webViewClient = object: WebViewClient() {
+                override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
+                    viewModel.setLoading(true)
+                    super.onPageStarted(view, url, favicon)
+                }
+
+                override fun onPageFinished(view: WebView?, url: String?) {
+                    viewModel.setLoading(false)
+                    super.onPageFinished(view, url)
+                }
+            }
             settings.javaScriptEnabled = true
         }
-        viewModel = ExamViewModel(sharedPreference)
-        viewModel.loadState()
         loadHome(webView)
         setContent {
             ExamTheme {
@@ -69,78 +76,14 @@ class MainActivity : ComponentActivity() {
                         floatingActionButtonPosition = FabPosition.End,
                         floatingActionButton = {
                             if (!viewModel.locked.value) {
-                                var show by remember { mutableStateOf(false) }
-                                val transition = updateTransition(show, label = "fab state")
-                                val offset by transition.animateDp(label = "fab offset") {
-                                    when (it) {
-                                        true -> 0.dp
-                                        false -> 50.dp
-                                    }
-                                }
-                                val visibility by transition.animateFloat(label = "fab visibility") {
-                                    when (it) {
-                                        true -> 1f
-                                        false -> 0f
-                                    }
-                                }
-                                Column(
-                                    verticalArrangement = Arrangement.Center,
-                                    horizontalAlignment = Alignment.CenterHorizontally
-                                ) {
-
-                                    if (visibility > 0f) {
-                                        FloatingActionButton(
-                                            modifier = Modifier
-                                                .padding(10.dp)
-                                                .offset(0.dp, offset.times(1.5f))
-                                                .alpha(visibility)
-                                                .size(45.dp),
-                                            onClick = { loadHome(webView) }) {
-                                            Icon(
-                                                imageVector = Icons.Default.Home,
-                                                contentDescription = "Home"
-                                            )
-                                        }
-                                        FloatingActionButton(
-                                            modifier = Modifier
-                                                .padding(10.dp)
-                                                .offset(0.dp, offset)
-                                                .alpha(visibility)
-                                                .size(45.dp),
-                                            onClick = { webView.reload() }) {
-                                            Icon(
-                                                imageVector = Icons.Default.Refresh,
-                                                contentDescription = "Refresh"
-                                            )
-                                        }
-                                    }
-
-                                    FloatingActionButton(
-                                        modifier = Modifier
-                                            .padding(10.dp),
-                                        onClick = { show = !show }) {
-                                        Crossfade(targetState = show) { shown ->
-                                            when (shown) {
-                                                false -> Icon(
-                                                    imageVector = Icons.Default.List,
-                                                    contentDescription = "Options"
-                                                )
-                                                true -> Icon(
-                                                    modifier = Modifier.rotate(visibility * 180),
-                                                    imageVector = Icons.Default.Close,
-                                                    contentDescription = "Close options"
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
+                                FabMenu(webView, viewModel)
                             }
                         }
-                    ) {
+                    ) { padding ->
                         if (viewModel.locked.value) {
-                            Login(viewModel)
+                            Login(Modifier.padding(padding), viewModel)
                         } else {
-                            Exam(webView)
+                            Exam(Modifier.padding(padding), webView)
                         }
                     }
                 }
@@ -177,7 +120,97 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun Login(viewModel: ExamViewModel) {
+fun FabMenu(webView: WebView, vm: ExamViewModel) {
+    var show by remember { mutableStateOf(false) }
+    val transition = updateTransition(show, label = "fab state")
+    val infiniteTransition = rememberInfiniteTransition()
+    val rotation by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        )
+    )
+    val offset by transition.animateDp(label = "fab offset") {
+        when (it) {
+            true -> 0.dp
+            false -> 50.dp
+        }
+    }
+    val visibility by transition.animateFloat(label = "fab visibility") {
+        when (it) {
+            true -> 1f
+            false -> 0f
+        }
+    }
+    Column(
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+
+        if (visibility > 0f) {
+            FloatingActionButton(
+                modifier = Modifier
+                    .padding(10.dp)
+                    .offset(0.dp, offset.times(1.5f))
+                    .alpha(visibility)
+                    .size(45.dp),
+                onClick = { loadHome(webView); show = !show }) {
+                Icon(
+                    imageVector = Icons.Default.Home,
+                    contentDescription = "Home"
+                )
+            }
+            FloatingActionButton(
+                modifier = Modifier
+                    .padding(10.dp)
+                    .offset(0.dp, offset)
+                    .alpha(visibility)
+                    .size(45.dp),
+                onClick = { webView.reload(); show = !show }) {
+                Icon(
+                    imageVector = Icons.Default.Refresh,
+                    contentDescription = "Refresh"
+                )
+            }
+        }
+
+        FloatingActionButton(
+            modifier = Modifier
+                .padding(10.dp),
+            onClick = { show = !show }) {
+            Crossfade(targetState = show) { shown ->
+                when (shown) {
+                    false -> {
+                        if (vm.loading.value) {
+                            Icon(
+                                modifier = Modifier.rotate(rotation),
+                                imageVector = Icons.Default.Refresh,
+                                contentDescription = "Close options"
+                            )
+                        } else {
+                            Icon(
+                                imageVector = Icons.Default.Menu,
+                                contentDescription = "Options"
+                            )
+                        }
+                    }
+                    true -> {
+                        Icon(
+                            modifier = Modifier.rotate(visibility * 180),
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Close options"
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun Login(modifier: Modifier, viewModel: ExamViewModel) {
     Column(
         Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.Center,
@@ -197,7 +230,7 @@ fun loadHome(webView: WebView) {
 }
 
 @Composable
-fun Exam(webView: WebView) {
+fun Exam(modifier: Modifier, webView: WebView) {
     AndroidView(factory = {
         webView
     })

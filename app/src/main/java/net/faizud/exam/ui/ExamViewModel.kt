@@ -11,12 +11,16 @@ import kotlinx.coroutines.flow.asStateFlow
 class ExamViewModel(private val sharedPreference: SharedPreferences) : ViewModel() {
     private val _locked = mutableStateOf(false)
     private val _examOn = MutableStateFlow(false)
+    private val _loading = mutableStateOf(true)
 
     val locked: State<Boolean>
         get() = _locked
 
     val examOn: StateFlow<Boolean>
         get() = _examOn.asStateFlow()
+
+    val loading: State<Boolean>
+        get() = _loading
 
     fun loadState() {
         _locked.value = sharedPreference.getBoolean("locked", false)
@@ -30,5 +34,9 @@ class ExamViewModel(private val sharedPreference: SharedPreferences) : ViewModel
     fun unlock() {
         _locked.value = false
         sharedPreference.edit().putBoolean("locked", _locked.value).apply()
+    }
+
+    fun setLoading(value: Boolean) {
+        _loading.value = value
     }
 }
