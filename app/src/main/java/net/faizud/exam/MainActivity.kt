@@ -11,6 +11,7 @@ import android.view.WindowInsetsController
 import android.view.WindowManager
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.Crossfade
@@ -51,7 +52,7 @@ class MainActivity : ComponentActivity() {
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT
             )
-            webViewClient = object: WebViewClient() {
+            webViewClient = object : WebViewClient() {
                 override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
                     viewModel.setLoading(true)
                     super.onPageStarted(view, url, favicon)
@@ -80,8 +81,14 @@ class MainActivity : ComponentActivity() {
                             }
                         }
                     ) { padding ->
-                        if (viewModel.locked.value) {
-                            Login(Modifier.padding(padding), viewModel)
+                        if (viewModel.apiLoading.value) {
+                            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                Text( "Loading...", )
+                            }
+                        } else if (viewModel.locked.value) {
+                            Login(Modifier.padding(padding), viewModel) {
+                                Toast.makeText(this, "Kata sandi salah", Toast.LENGTH_SHORT).show()
+                            }
                         } else {
                             Exam(Modifier.padding(padding), webView)
                         }
@@ -110,11 +117,11 @@ class MainActivity : ComponentActivity() {
     override fun onPause() {
         super.onPause()
         viewModel.lock()
-        Log.d("DEBUG", "Paused")
     }
 
     override fun onResume() {
         super.onResume()
+        viewModel.getStatus()
         Log.d("DEBUG", "Resumed")
     }
 }
@@ -210,15 +217,19 @@ fun FabMenu(webView: WebView, vm: ExamViewModel) {
 }
 
 @Composable
-fun Login(modifier: Modifier, viewModel: ExamViewModel) {
+fun Login(modifier: Modifier, viewModel: ExamViewModel, onError: () -> Unit) {
+    var username by remember { mutableStateOf("") }
     Column(
         Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        TextField(value = "", onValueChange = {}, placeholder = { Text("Password") })
+        TextField(
+            value = username,
+            onValueChange = { username = it },
+            placeholder = { Text("Password") })
         Spacer(Modifier.height(16.dp))
-        Button(onClick = { viewModel.unlock() }) {
+        Button(onClick = { viewModel.verify(username, onError) }) {
             Text(text = "Submit")
         }
     }
