@@ -17,6 +17,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -25,6 +26,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -230,6 +233,7 @@ fun FabMenu(webView: WebView, vm: ExamViewModel) {
 @Composable
 fun Login(viewModel: ExamViewModel, onError: () -> Unit) {
     var username by remember { mutableStateOf("") }
+    val focusManager = LocalFocusManager.current
     Column(
         Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.Center,
@@ -243,6 +247,11 @@ fun Login(viewModel: ExamViewModel, onError: () -> Unit) {
         TextField(
             value = username,
             onValueChange = { username = it },
+            singleLine = true,
+            keyboardActions = KeyboardActions(onDone = {
+                focusManager.clearFocus()
+                viewModel.verify(username, onError)
+            }),
             placeholder = { Text("Password") })
         Spacer(Modifier.height(16.dp))
         Button(onClick = { viewModel.verify(username, onError) }) {
