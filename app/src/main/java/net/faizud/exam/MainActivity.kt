@@ -25,6 +25,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.view.WindowCompat
@@ -46,7 +47,6 @@ class MainActivity : ComponentActivity() {
         val sharedPreference =
             getSharedPreferences(BuildConfig.APPLICATION_ID, Context.MODE_PRIVATE)
         viewModel = ExamViewModel(sharedPreference)
-        viewModel.loadState()
         val webView = WebView(this).apply {
             layoutParams = ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
@@ -83,10 +83,21 @@ class MainActivity : ComponentActivity() {
                     ) { padding ->
                         if (viewModel.apiLoading.value) {
                             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                Text( "Loading...", )
+                                Text("Loading...")
+                            }
+                        } else if (viewModel.apiFailed.value) {
+                            Column(
+                                Modifier.fillMaxSize(),
+                                verticalArrangement = Arrangement.Center,
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text("Gagal menghubungkan ke server")
+                                Button(onClick = { viewModel.getStatus() }) {
+                                    Text("Refresh")
+                                }
                             }
                         } else if (viewModel.locked.value) {
-                            Login(Modifier.padding(padding), viewModel) {
+                            Login(viewModel) {
                                 Toast.makeText(this, "Kata sandi salah", Toast.LENGTH_SHORT).show()
                             }
                         } else {
@@ -217,13 +228,18 @@ fun FabMenu(webView: WebView, vm: ExamViewModel) {
 }
 
 @Composable
-fun Login(modifier: Modifier, viewModel: ExamViewModel, onError: () -> Unit) {
+fun Login(viewModel: ExamViewModel, onError: () -> Unit) {
     var username by remember { mutableStateOf("") }
     Column(
         Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
+        Text(
+            "Untuk melanjutkan, silakan menghubungi pengawas/panitia",
+            textAlign = TextAlign.Center
+        )
+        Spacer(Modifier.height(16.dp))
         TextField(
             value = username,
             onValueChange = { username = it },

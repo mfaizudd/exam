@@ -19,6 +19,7 @@ class ExamViewModel(private val sharedPreference: SharedPreferences) : ViewModel
     private val _examOn = mutableStateOf(false)
     private val _loading = mutableStateOf(true)
     private val _apiLoading = mutableStateOf(false)
+    private val _apiFailed = mutableStateOf(false)
 
     val locked: State<Boolean>
         get() = _locked
@@ -28,33 +29,35 @@ class ExamViewModel(private val sharedPreference: SharedPreferences) : ViewModel
 
     val apiLoading: State<Boolean>
         get() = _apiLoading
-    
-    fun loadState() {
-        _locked.value = sharedPreference.getBoolean("locked", false)
-        getStatus()
-    }
+
+    val apiFailed: State<Boolean>
+        get() = _apiFailed
 
     fun getStatus() {
         viewModelScope.launch {
+            _apiFailed.value = false
+            _apiLoading.value = true
             try {
-                _apiLoading.value = true
                 val result = SitumanApi.retrofitService.getStatus()
                 Log.d("DEBUG", result.toString())
                 _examOn.value = result.enable
-                if (_examOn.value && _locked.value) {
+                if (_examOn.value) {
                     lock()
                 } else {
                     unlock()
                 }
-                _apiLoading.value = false
             } catch (ex: Exception) {
                 ex.message?.let { Log.d("DEBUG", it) }
+                _apiFailed.value = true
+            } finally {
+                _apiLoading.value = false
             }
         }
     }
 
     fun verify(passwd: String, onError: () -> Unit) {
         viewModelScope.launch {
+            _apiFailed.value = false
             _apiLoading.value = true
             try {
                 val verify = Verify(passwd)
@@ -70,6 +73,7 @@ class ExamViewModel(private val sharedPreference: SharedPreferences) : ViewModel
                 ex.message?.let { Log.d("DEBUG", it) }
                 lock()
                 onError()
+                _apiFailed.value = true
             } finally {
                 _apiLoading.value = false
             }
@@ -78,12 +82,10 @@ class ExamViewModel(private val sharedPreference: SharedPreferences) : ViewModel
 
     fun lock() {
         _locked.value = true
-        sharedPreference.edit().putBoolean("locked", _locked.value).apply()
     }
 
     fun unlock() {
         _locked.value = false
-        sharedPreference.edit().putBoolean("locked", _locked.value).apply()
     }
 
     fun setLoading(value: Boolean) {
