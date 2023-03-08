@@ -14,7 +14,8 @@
         <activity
             android:name="net.faizud.exam.MainActivity"
             android:exported="true"
-            android:theme="@style/Theme.Exam">
+            android:theme="@style/Theme.Exam"
+            android:screenOrientation="portrait">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 

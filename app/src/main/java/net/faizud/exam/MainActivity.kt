@@ -1,6 +1,7 @@
 package net.faizud.exam
 
 import android.content.Context
+import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.os.Build
 import android.os.Bundle
@@ -9,11 +10,11 @@ import android.view.ViewGroup
 import android.view.WindowInsets
 import android.view.WindowInsetsController
 import android.view.WindowManager
-import android.webkit.WebView
-import android.webkit.WebViewClient
+import android.webkit.*
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.annotation.RequiresApi
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.layout.*
@@ -65,6 +66,48 @@ class MainActivity : ComponentActivity() {
                     viewModel.setLoading(false)
                     super.onPageFinished(view, url)
                 }
+
+                override fun onReceivedHttpAuthRequest(
+                    view: WebView?,
+                    handler: HttpAuthHandler?,
+                    host: String?,
+                    realm: String?
+                ) {
+                    super.onReceivedHttpAuthRequest(view, handler, host, realm)
+                }
+
+                @Deprecated(
+                    "Deprecated in Java", ReplaceWith(
+                        "super.onReceivedError(view, errorCode, description, failingUrl)",
+                        "android.webkit.WebViewClient"
+                    )
+                )
+                override fun onReceivedError(
+                    view: WebView?,
+                    errorCode: Int,
+                    description: String?,
+                    failingUrl: String?
+                ) {
+                    super.onReceivedError(view, errorCode, description, failingUrl)
+                    if (errorCode == ERROR_CONNECT || errorCode == ERROR_TIMEOUT) {
+                        viewModel.setFail(true)
+                    }
+                }
+
+                @RequiresApi(Build.VERSION_CODES.M)
+                override fun onReceivedError(
+                    view: WebView?,
+                    request: WebResourceRequest?,
+                    error: WebResourceError?
+                ) {
+                    super.onReceivedError(view, request, error)
+                    if (error?.errorCode == ERROR_CONNECT || error?.errorCode == ERROR_TIMEOUT) {
+                        viewModel.setFail(true)
+                    } else {
+                        Log.d("WEBVIEW_ERROR", error.toString())
+                    }
+                }
+
             }
             settings.javaScriptEnabled = true
         }
@@ -97,6 +140,17 @@ class MainActivity : ComponentActivity() {
                                 Text("Gagal menghubungkan ke server")
                                 Button(onClick = { viewModel.getStatus() }) {
                                     Text("Refresh")
+                                }
+                            }
+                        } else if (viewModel.webViewFailed.value) {
+                            Column(
+                                Modifier.fillMaxSize(),
+                                verticalArrangement = Arrangement.Center,
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text("Gagal menghubungkan ke server")
+                                Button(onClick = { webView.reload() }) {
+                                    Text("Reload")
                                 }
                             }
                         } else if (viewModel.locked.value) {
@@ -138,6 +192,23 @@ class MainActivity : ComponentActivity() {
         viewModel.getStatus()
         Log.d("DEBUG", "Resumed")
     }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (!hasFocus) {
+            Log.d("DEBUG", "Focus Lost")
+            viewModel.getStatus()
+        }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    override fun onMultiWindowModeChanged(isInMultiWindowMode: Boolean, newConfig: Configuration) {
+        super.onMultiWindowModeChanged(isInMultiWindowMode, newConfig)
+        if (isInMultiWindowMode) {
+            viewModel.getStatus()
+        }
+    }
+
 }
 
 @Composable

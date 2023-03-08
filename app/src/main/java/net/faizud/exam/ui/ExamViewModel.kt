@@ -20,6 +20,7 @@ class ExamViewModel(private val sharedPreference: SharedPreferences) : ViewModel
     private val _loading = mutableStateOf(true)
     private val _apiLoading = mutableStateOf(false)
     private val _apiFailed = mutableStateOf(false)
+    private val _webViewFailed = mutableStateOf(false)
 
     val locked: State<Boolean>
         get() = _locked
@@ -32,6 +33,9 @@ class ExamViewModel(private val sharedPreference: SharedPreferences) : ViewModel
 
     val apiFailed: State<Boolean>
         get() = _apiFailed
+
+    val webViewFailed: State<Boolean>
+        get() = _webViewFailed
 
     fun getStatus() {
         viewModelScope.launch {
@@ -90,5 +94,12 @@ class ExamViewModel(private val sharedPreference: SharedPreferences) : ViewModel
 
     fun setLoading(value: Boolean) {
         _loading.value = value
+        if (value) {
+            _webViewFailed.value = false
+        }
+    }
+
+    fun setFail(value: Boolean) {
+        _webViewFailed.value = value
     }
 }
