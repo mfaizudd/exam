@@ -21,6 +21,7 @@ class ExamViewModel(private val sharedPreference: SharedPreferences) : ViewModel
     private val _apiLoading = mutableStateOf(false)
     private val _apiFailed = mutableStateOf(false)
     private val _webViewFailed = mutableStateOf(false)
+    private val _url = mutableStateOf<String?>(null)
 
     val locked: State<Boolean>
         get() = _locked
@@ -37,6 +38,9 @@ class ExamViewModel(private val sharedPreference: SharedPreferences) : ViewModel
     val webViewFailed: State<Boolean>
         get() = _webViewFailed
 
+    val url: State<String?>
+        get() = _url
+
     fun getStatus() {
         viewModelScope.launch {
             _apiFailed.value = false
@@ -45,6 +49,7 @@ class ExamViewModel(private val sharedPreference: SharedPreferences) : ViewModel
                 val result = SitumanApi.retrofitService.getStatus()
                 Log.d("DEBUG", result.toString())
                 _examOn.value = result.enable
+                _url.value = result.ip
                 if (_examOn.value) {
                     lock()
                 } else {

@@ -28,7 +28,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -111,8 +110,10 @@ class MainActivity : ComponentActivity() {
             }
             settings.javaScriptEnabled = true
         }
-        loadHome(webView)
         setContent {
+            if (viewModel.url.value != null) {
+                loadUrl(webView, viewModel.url.value!!)
+            }
             ExamTheme {
                 // A surface container using the 'background' color from the theme
                 Surface(
@@ -248,7 +249,7 @@ fun FabMenu(webView: WebView, vm: ExamViewModel) {
                     .offset(0.dp, offset.times(1.5f))
                     .alpha(visibility)
                     .size(45.dp),
-                onClick = { loadHome(webView); show = !show }) {
+                onClick = { vm.url.value?.let { loadUrl(webView, it) }; show = !show }) {
                 Icon(
                     imageVector = Icons.Default.Home,
                     contentDescription = "Home"
@@ -331,9 +332,8 @@ fun Login(viewModel: ExamViewModel, onError: () -> Unit) {
     }
 }
 
-fun loadHome(webView: WebView) {
-    val url = "https://lms.faizud.net"
-    webView.loadUrl(url)
+fun loadUrl(webView: WebView, url: String) {
+    webView.loadUrl("http://$url")
 }
 
 @Composable

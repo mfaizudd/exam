@@ -2,7 +2,10 @@ package net.faizud.exam.network
 
 import com.squareup.moshi.Json
 
-data class Status (
-    @Json(name="enable")
-    val enable: Boolean
+data class Status(
+    @Json(name = "enable")
+    val enable: Boolean,
+
+    @Json(name = "ip")
+    val ip: String?
 )
